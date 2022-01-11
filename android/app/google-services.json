@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "718857983651",
+    "project_id": "safety-app-f65a0",
+    "storage_bucket": "safety-app-f65a0.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:718857983651:android:ad5cf5fa386a32ed26d116",
+        "android_client_info": {
+          "package_name": "com.hyde.safety_application"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "718857983651-lags0jesjf5i0evc84mii3quo1fuq0qc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDqtOwx-D1o4EVrnd3WtJ0A6iZhp-_YJy8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "718857983651-lags0jesjf5i0evc84mii3quo1fuq0qc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
