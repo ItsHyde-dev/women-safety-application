@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:safety_application/db/email_database.dart';
-import 'package:safety_application/models/email_model.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
+import 'boxes.dart';
 import 'functions.dart';
+import 'package:safety_application/models/mail_model.dart';
 
 class ConfigMail extends StatelessWidget {
   const ConfigMail({Key? key}) : super(key: key);
@@ -32,15 +32,23 @@ class _ConfigMailStateFullState extends State<ConfigMailStateFull> {
   bool isLoading = false;
   late List<Mail> mail;
   bool isChecked = false;
-
+  late Box<Mail> box;
 
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    refreshMail().whenComplete(() {
-      setState(() {});
-    });
+
+    box = Boxes.getEmail();
+    box.get('email') == null
+        ? null
+        : {
+            customEmailController.text = box.get('email')!.mail.toString(),
+            isChecked = box.get('email')!.location
+          };
+    // refreshMail().whenComplete(() {
+    //   setState(() {});
+    // });
   }
 
   @override
@@ -77,59 +85,50 @@ class _ConfigMailStateFullState extends State<ConfigMailStateFull> {
                 Checkbox(
                     checkColor: Colors.blue,
                     value: isChecked,
-                    onChanged: (bool? value){
-                      setState((){
+                    onChanged: (bool? value) {
+                      setState(() {
                         isChecked = value!;
-                        print(value);
                       });
-                    }
-                ),
+                    }),
                 Text(
                   "Send location?",
-                  style: TextStyle(
-                      color: Colors.white
-                  ),
+                  style: TextStyle(color: Colors.white),
                 )
               ],
             ),
             OutlinedButton(
               onPressed: () {
-                Mail newMail = Mail(
-                    id: mail[0].id,
-                    mail: customEmailController.text.toString(),
-                    location: isChecked.toString(),
-                );
+                final mail = Mail()
+                  ..mail = customEmailController.text.toString()
+                  ..location = isChecked;
 
-                updateMail(newMail);
+                final box = Boxes.getEmail();
+                box.put('email', mail);
               },
               child: Text("Save Changes"),
               style: OutlinedButton.styleFrom(
                   primary: Colors.white, backgroundColor: Colors.black),
             ),
-
-
           ]),
     );
   }
 
-  Future refreshMail() async {
-    setState(() {
-      isLoading = true;
-    });
+  // Future refreshMail() async {
+  //   setState(() {
+  //     isLoading = true;
+  //   });
 
-    this.mail = await EmailDatabase.instance.readAllMails();
-    if (!mail.isNotEmpty) {
-      print('new one being created');
-      await EmailDatabase.instance.create(Mail(mail: ' ', location: isChecked.toString()));
-    }
-    customEmailController.text = mail[0].mail.toString();
-    isChecked = (mail[0].location == 'true');
-    setState(() {
-      isLoading = false;
-    });
-  }
+  //   this.mail = await EmailDatabase.instance.readAllMails();
+  //   if (!mail.isNotEmpty) {
+  //     print('new one being created');
+  //     await EmailDatabase.instance
+  //         .create(Mail(mail: ' ', location: isChecked.toString()));
+  //   }
+  //   customEmailController.text = mail[0].mail.toString();
+  //   isChecked = (mail[0].location == 'true');
+  //   setState(() {
+  //     isLoading = false;
+  //   });
+  // }
 
-  Future updateMail(Mail newMail) async {
-    await EmailDatabase.instance.update(newMail);
-  }
 }

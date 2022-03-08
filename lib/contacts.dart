@@ -1,11 +1,12 @@
-import 'dart:ffi';
-import 'dart:io';
 import 'dart:async';
-import 'package:flutter/cupertino.dart';
+
 import 'package:flutter/material.dart';
-import 'package:safety_application/db/contacts_database.dart';
+
 import 'package:safety_application/models/contacts_model.dart';
 import 'functions.dart';
+
+import 'package:hive_flutter/hive_flutter.dart';
+import 'boxes.dart';
 
 class Contacts extends StatelessWidget {
   const Contacts({Key? key}) : super(key: key);
@@ -38,9 +39,10 @@ class _ContactsStateFullState extends State<ContactsStateFull>
   late Animation<double> _animation;
   FocusNode textFocus = FocusNode();
   bool addContact = false;
-  late List<Contact> contacts;
+  List<Contact>? contacts = null;
   bool isLoading = false;
   bool updateScreen = false;
+  late Box contactsBox;
 
   @override
   void initState() {
@@ -61,7 +63,7 @@ class _ContactsStateFullState extends State<ContactsStateFull>
 
     textFocus.addListener(_onFocusChange);
 
-    refreshContacts();
+    _getContactsBox();
 
     // widget.storage.readData().then((List<String> value) {
     //   setState(() {
@@ -112,15 +114,10 @@ class _ContactsStateFullState extends State<ContactsStateFull>
         home: Scaffold(
           body: Container(
             decoration: BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/blue.jpg'),
-                fit: BoxFit.cover
-              )
-            ),
+                image: DecorationImage(
+                    image: AssetImage('assets/blue.jpg'), fit: BoxFit.cover)),
             child: Stack(
-              children: [
-                ContactUI()
-              ],
+              children: [ContactUI()],
             ),
           ),
           floatingActionButton: FloatingActionButton(
@@ -146,57 +143,62 @@ class _ContactsStateFullState extends State<ContactsStateFull>
     return Container(
       padding: EdgeInsets.fromLTRB(5, 30, 5, 5),
       child: Container(
-        height: MediaQuery.of(context).size.height,
-        child: Flexible(
-          flex: 1,
-          fit: FlexFit.tight,
-          child: ListView.builder(
-            itemCount: contacts.length,
-            itemBuilder: (context, index) {
-              counter++;
-              final contactItem = contacts[index];
-              return ListTile(
-                  title: Padding(
-                    padding: const EdgeInsets.only(bottom: 15),
-                    child: Wrap(
-                        direction: Axis.horizontal,
-                        alignment: WrapAlignment.spaceAround,
-                        children: [
-                      Text(
-                          "${counter} . ${contactItem.name}\n      ${contactItem.email}",
-                          style: TextStyle(fontSize: 20, color: Colors.white)),
-                      IconButton(
-                          icon: const Icon(Icons.delete_forever),
-                          tooltip: 'delete the contact from the list',
-                          color: Colors.red,
-                          onPressed: () {
-                            setState(() {
-                              ContactsDatabase.instance.delete(contactItem.id!);
-                              refreshContacts();
-                            });
-                          }),
-                    ]),
-                  ));
-            },
-          ),
-        ),
-      ),
+          height: MediaQuery.of(context).size.height,
+          child: Flexible(
+            flex: 1,
+            fit: FlexFit.tight,
+            child: ValueListenableBuilder<Box<Contact>>(
+              valueListenable: Boxes.getContacts().listenable(),
+              builder: (context, box, _) {
+                final contacts = box.values.toList().cast<Contact>();
+
+                return buildEmailList(contacts);
+              },
+            ),
+          )),
+    );
+  }
+
+  Widget buildEmailList(List<Contact> contacts) {
+    return ListView.builder(
+      itemCount: contacts.length,
+      itemBuilder: (context, index) {
+        counter++;
+        final contactItem = contacts[index];
+        return ListTile(
+            title: Padding(
+          padding: const EdgeInsets.only(bottom: 15),
+          child: Wrap(
+              direction: Axis.horizontal,
+              alignment: WrapAlignment.spaceAround,
+              children: [
+                Text(
+                    "${counter} . ${contactItem.name}\n      ${contactItem.email}",
+                    style: TextStyle(fontSize: 20, color: Colors.white)),
+                IconButton(
+                    icon: const Icon(Icons.delete_forever),
+                    tooltip: 'delete the contact from the list',
+                    color: Colors.red,
+                    onPressed: () {
+                      contactItem.delete();
+                    }),
+              ]),
+        ));
+      },
     );
   }
 
   Widget EmailInput() {
     return Container(
-      width: MediaQuery.of(context).size.width * 4 / 5+50,
-      height: MediaQuery.of(context).size.height/3*2,
+      width: MediaQuery.of(context).size.width * 4 / 5 + 50,
+      height: MediaQuery.of(context).size.height / 3 * 2,
       alignment: Alignment.center,
       child: Card(
         color: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(30.0),
         ),
-        child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Padding(
             padding: EdgeInsets.only(left: 20, right: 20),
             child: TextFormField(
@@ -214,16 +216,16 @@ class _ContactsStateFullState extends State<ContactsStateFull>
                   hintText: "Enter the email of the emergency contact"),
             ),
           ),
-              Padding(
-                padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 20),
-                child: TextFormField(
-                  controller: contactNumberInput,
-                  decoration: InputDecoration(
-                      hintText: "Enter the number of the emergency contact"),
-                ),
-              ),
+          Padding(
+            padding: EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 20),
+            child: TextFormField(
+              controller: contactNumberInput,
+              decoration: InputDecoration(
+                  hintText: "Enter the number of the emergency contact"),
+            ),
+          ),
           OutlinedButton(
-            onPressed: (){
+            onPressed: () {
               writeToDB();
               setState(() {
                 addContact = false;
@@ -236,18 +238,16 @@ class _ContactsStateFullState extends State<ContactsStateFull>
     );
   }
 
-  Future writeToDB () async{
+  Future writeToDB() async {
+    final contact = Contact()
+      ..name = contactNameInput.text
+      ..email = contactEmailInput.text
+      ..number = contactNumberInput.text;
 
-    Contact writeContact = Contact(
-      name: contactNameInput.text.toString(),
-      email: contactEmailInput.text.toString(),
-      number: contactNumberInput.text.toString()
-    );
-
-    await ContactsDatabase.instance.create(writeContact);
-
-    refreshContacts();
+    final box = Boxes.getContacts();
+    box.add(contact);
   }
+
   Widget ContactUI() {
     if (addContact) {
       return Container(
@@ -255,25 +255,15 @@ class _ContactsStateFullState extends State<ContactsStateFull>
         child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
-            children: [EmailInput()]
-          ),
-      )
-      ;
+            children: [EmailInput()]),
+      );
     } else {
       return EmailList();
     }
   }
 
-  Future refreshContacts() async{
-    setState(() {
-      isLoading = true;
-    });
-
-    this.contacts = await ContactsDatabase.instance.readAllContacts();
-
-    setState(() {
-      isLoading = false;
-    });
+  Future _getContactsBox() async {
+    contactsBox = await Hive.openBox<Contact>('contacts');
   }
 }
 
