@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -23,7 +24,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  await Firebase.initializeApp();
   await Hive.initFlutter();
   Hive.registerAdapter(ContactAdapter());
   Hive.registerAdapter(MailAdapter());
@@ -70,12 +71,13 @@ class _MainPageState extends State<MainPage> {
   late ShakeDetector detector;
   int counter = 0;
   late final user;
+  bool userLoadedBool = false;
 
   @override
   void initState() {
     super.initState();
     GoogleAuthApi.signOut();
-    getUser();
+    getUser().whenComplete(() => userLoaded());
     getLocationAccess();
     detector = ShakeDetector.autoStart(
       onPhoneShake: () {
@@ -127,106 +129,56 @@ class _MainPageState extends State<MainPage> {
         ),
       ),
       home: Scaffold(
-        resizeToAvoidBottomInset: true,
-        backgroundColor: Colors.white,
-        appBar: null,
-        // AppBar(
-        //   backgroundColor: Colors.white10,
-        //   title: Center(
-        //     child: Text(
-        //       widget.title,
-        //       style: TextStyle(
-        //         color: Colors.white,
-        //       ),
-        //     ),
-        //   ),
-        // )
-        body: Container(
-          height: MediaQuery.of(context).size.height,
-          width: MediaQuery.of(context).size.width,
-          decoration: BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("assets/blue.jpg"),
-                fit: BoxFit.cover,
+          resizeToAvoidBottomInset: true,
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            centerTitle: true,
+            backgroundColor: Colors.black,
+            title: Text(
+              "Safety Application",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xffc4c4c4),
+                fontSize: 24,
+                fontFamily: "Inter",
+                fontWeight: FontWeight.w600,
               ),
-              borderRadius: BorderRadius.only(
-                  topLeft: Radius.circular(45), topRight: Radius.circular(45)),
-              color: Colors.black54),
-          child: Padding(
-            padding: EdgeInsets.all(30),
-            child: Center(
-                child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                //Video button
-                OutlinedButton(
-                    onPressed: () {
-                      Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => Videos()));
-                    },
-                    child: Text("To videos"),
-                    style: ButtonStyle(
-                      shape: MaterialStateProperty.all(RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30.0))),
-                    )),
-                OutlinedButton(
-                    onPressed: () {
-                      sendEmail(user);
-                    },
-                    child: Text("Send email"),
-                    style: ButtonStyle(
-                      shape: MaterialStateProperty.all(RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30.0))),
-                    )),
-                OutlinedButton(
-                    onPressed: () {
-                      Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => Contacts()));
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Configure Emergency Contacts",
-                        ),
-                        Icon(
-                          Icons.mail_outline,
-                          color: Colors.black87,
-                        ),
-                      ],
-                    ),
-                    style: ButtonStyle(
-                      shape: MaterialStateProperty.all(RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30.0))),
-                    )
-                    // style : OutlinedButton.styleFrom(
-                    //   primary: Colors.white,
-                    //   backgroundColor: Colors.black,
-                    //   side: BorderSide(
-                    //     color: Colors.tealAccent,
-                    //     width: 0.8,
-                    //   ),
-                    // ),
-                    ),
-                OutlinedButton(
-                    onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => ConfigMail()));
-                    },
-                    child: Text("Customise Email"),
-                    style: ButtonStyle(
-                      shape: MaterialStateProperty.all(RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(30.0))),
-                    )),
-              ],
-            )),
+            ),
           ),
-        ),
-      ),
+          // Container(
+          //         width: 428,
+          //         height: 63,
+          //         color: Colors.black,
+          //         padding: const EdgeInsets.only(
+          //           left: 107,
+          //           right: 24,
+          //           top: 20,
+          //           bottom: 19,
+          //         ),
+          //         child: Text(
+          //           "Safety Application",
+          //           textAlign: TextAlign.center,
+          //           style: TextStyle(
+          //             color: Color(0xffc4c4c4),
+          //             fontSize: 24,
+          //             fontFamily: "Inter",
+          //             fontWeight: FontWeight.w600,
+          //           ),
+          //         ),
+          //       ),
+
+          // AppBar(
+          //   backgroundColor: Colors.white10,
+          //   title: Center(
+          //     child: Text(
+          //       widget.title,
+          //       style: TextStyle(
+          //         color: Colors.white,
+          //       ),
+          //     ),
+          //   ),
+          // )
+          body: (userLoadedBool) ? HomePageNew(context, user) : null),
     );
   }
 
@@ -259,6 +211,12 @@ class _MainPageState extends State<MainPage> {
       return Future.error(
           'Location permissions are permanently denied, we cannot request permissions.');
     }
+  }
+
+  userLoaded() {
+    setState(() {
+      userLoadedBool = true;
+    });
   }
 }
 
@@ -326,8 +284,6 @@ Future sendEmail(user) async {
     print(e);
   }
 
-  await Firebase.initializeApp();
-
   FirebaseFirestore firestore = FirebaseFirestore.instance;
   CollectionReference emergencyCollection = firestore.collection('emergency');
   await emergencyCollection.add({
@@ -335,4 +291,345 @@ Future sendEmail(user) async {
     'location': new GeoPoint(location.latitude, location.longitude),
     'time': DateTime.now(),
   });
+}
+
+Widget HomePageOld(BuildContext context, user) {
+  return Container(
+    height: MediaQuery.of(context).size.height,
+    width: MediaQuery.of(context).size.width,
+    decoration: BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage("assets/blue.jpg"),
+          fit: BoxFit.cover,
+        ),
+        borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(45), topRight: Radius.circular(45)),
+        color: Colors.black54),
+    child: Padding(
+      padding: EdgeInsets.all(30),
+      child: Center(
+          child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          //Video button
+          OutlinedButton(
+              onPressed: () {
+                Navigator.push(
+                    context, MaterialPageRoute(builder: (context) => Videos()));
+              },
+              child: Text("To videos"),
+              style: ButtonStyle(
+                shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30.0))),
+              )),
+          OutlinedButton(
+              onPressed: () {
+                sendEmail(user);
+              },
+              child: Text("Send email"),
+              style: ButtonStyle(
+                shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30.0))),
+              )),
+          OutlinedButton(
+              onPressed: () {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => Contacts()));
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    "Configure Emergency Contacts",
+                  ),
+                  Icon(
+                    Icons.mail_outline,
+                    color: Colors.black87,
+                  ),
+                ],
+              ),
+              style: ButtonStyle(
+                shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30.0))),
+              )
+              // style : OutlinedButton.styleFrom(
+              //   primary: Colors.white,
+              //   backgroundColor: Colors.black,
+              //   side: BorderSide(
+              //     color: Colors.tealAccent,
+              //     width: 0.8,
+              //   ),
+              // ),
+              ),
+          OutlinedButton(
+              onPressed: () {
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => ConfigMail()));
+              },
+              child: Text("Customise Email"),
+              style: ButtonStyle(
+                shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30.0))),
+              )),
+        ],
+      )),
+    ),
+  );
+}
+
+Widget HomePageNew(BuildContext context, user) {
+  return Container(
+    width: 428,
+    height: 926,
+    color: Color(0xff060606),
+    padding: const EdgeInsets.only(
+      bottom: 80,
+    ),
+    child: Stack(
+      children: [
+        SizedBox(
+          height: 250,
+          width: double.infinity,
+          child: Image.asset(
+            'assets/Images/Main-screen-vector.png',
+            fit: BoxFit.cover,
+          ),
+        ),
+        Container(
+          width: double.infinity,
+          height: MediaQuery.of(context).size.height,
+          child: Positioned(
+            bottom: 20,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  width: double.infinity,
+                  height: MediaQuery.of(context).size.height * 0.4,
+                  child: Positioned.fill(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        //app bar
+
+                        //videos
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => Videos()));
+                          },
+                          child: Container(
+                            width: 218,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(48),
+                              gradient: LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [Color(0xff27e1e6), Color(0xffaa64ea)],
+                              ),
+                            ),
+                            padding: const EdgeInsets.only(
+                              left: 32,
+                              right: 16,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "Videos",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontFamily: "Inter",
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(width: 24),
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(Icons.video_collection,
+                                      color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        //Send email
+                        GestureDetector(
+                          onTap: () {
+                            sendEmail(user);
+                          },
+                          child: Container(
+                            width: 218,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(48),
+                              gradient: LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [Color(0xff27e1e6), Color(0xffaa64ea)],
+                              ),
+                            ),
+                            padding: const EdgeInsets.only(
+                              left: 32,
+                              right: 16,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "Send Email",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontFamily: "Inter",
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(width: 24),
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(Icons.email, color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        //edit contacts
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => Contacts()));
+                          },
+                          child: Container(
+                            width: 218,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(48),
+                              gradient: LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [Color(0xff27e1e6), Color(0xffaa64ea)],
+                              ),
+                            ),
+                            padding: const EdgeInsets.only(
+                              left: 32,
+                              right: 16,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "Edit Contacts",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontFamily: "Inter",
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                SizedBox(width: 24),
+                                Container(
+                                  width: 20,
+                                  height: 20,
+                                  child: Stack(
+                                    children: [
+                                      Positioned.fill(
+                                        child: Align(
+                                          alignment: Alignment.topLeft,
+                                          child: Icon(Icons.contacts_rounded,
+                                              color: Colors.white),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        //emergency message
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) => ConfigMail()));
+                          },
+                          child: Container(
+                            width: 218,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(48),
+                              gradient: LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [Color(0xff27e1e6), Color(0xffaa64ea)],
+                              ),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  "Emergency Message",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontFamily: "Inter",
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
 }

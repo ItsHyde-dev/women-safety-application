@@ -61,18 +61,55 @@ class _VideosStatefulState extends State<VideosStateful> {
   Widget VideoListPage() {
     return Scaffold(
         body: Container(
+            color: Colors.black,
             child: ListView.builder(
                 itemCount: titles.length,
                 itemBuilder: (context, index) {
                   return ListTile(
-                      title: Card(
+                      title: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(15),
+                            gradient: LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [Color(0xff27e1e6), Color(0xffaa64ea)],
+                            ),
+                          ),
                           child: Padding(
                               padding: EdgeInsets.all(20),
                               child: InkWell(
-                                  child: Text(titles[index],
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                      )),
+                                  child: Stack(
+                                    children: <Widget>[
+                                      // Stroked text as border.
+                                      Text(
+                                        titles[index],
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          foreground: Paint()
+                                            ..style = PaintingStyle.stroke
+                                            ..strokeWidth = 2
+                                            ..color =
+                                                Colors.black87.withAlpha(100),
+                                        ),
+                                      ),
+                                      // Solid text as fill.
+                                      Text(
+                                        titles[index],
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  // Text(titles[index],
+                                  //     style: TextStyle(
+                                  //       color: Colors.white,
+                                  //       fontSize: 18,
+                                  //       fontFamily: "Inter",
+                                  //       fontWeight: FontWeight.w600,
+
+                                  //     )),
                                   onTap: () {
                                     setState(() {
                                       counter = index;

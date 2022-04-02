@@ -7,23 +7,19 @@ import 'functions.dart';
 
 import 'package:hive_flutter/hive_flutter.dart';
 import 'boxes.dart';
+import 'GradientText.dart';
 
 class Contacts extends StatelessWidget {
   const Contacts({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-        home: ContactsStateFull(
-      storage: Functions(),
-    ));
+    return MaterialApp(home: ContactsStateFull());
   }
 }
 
 class ContactsStateFull extends StatefulWidget {
-  final Functions storage;
-
-  const ContactsStateFull({Key? key, required this.storage}) : super(key: key);
+  const ContactsStateFull({Key? key}) : super(key: key);
 
   @override
   _ContactsStateFullState createState() => _ContactsStateFullState();
@@ -85,20 +81,6 @@ class _ContactsStateFullState extends State<ContactsStateFull>
     super.dispose();
   }
 
-  void writeToFile() async {
-    setState(() {
-      readFile.add(contactNameInput.text + "///" + contactEmailInput.text);
-      contactNameInput.text = "";
-      contactEmailInput.text = "";
-    });
-
-    return widget.storage.writeFile(readFile);
-  }
-
-  void writeEmpty() async {
-    return widget.storage.writeFile(readFile);
-  }
-
   int counter = 0;
 
   @override
@@ -113,29 +95,85 @@ class _ContactsStateFullState extends State<ContactsStateFull>
         ),
         home: Scaffold(
           body: Container(
-            decoration: BoxDecoration(
-                image: DecorationImage(
-                    image: AssetImage('assets/blue.jpg'), fit: BoxFit.cover)),
+            color: Colors.black,
             child: Stack(
-              children: [ContactUI()],
+              children: [
+                ContactUI(),
+                Positioned(
+                  bottom: 50,
+                  right: 50,
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        addContact = !addContact;
+                      });
+                    },
+                    child: Container(
+                      height: 50,
+                      width: 50,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(48),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xff27e1e6), Color(0xffaa64ea)],
+                        ),
+                      ),
+                      child: Center(
+                          child: Padding(
+                        padding: const EdgeInsets.only(left: 2, top: 2),
+                        child: fabIcon(),
+                      )),
+                    ),
+                  ),
+                )
+              ],
             ),
           ),
-          floatingActionButton: FloatingActionButton(
-              onPressed: () {
-                setState(() {
-                  addContact = !addContact;
-                });
-              },
-              child: fabIcon(),
-              backgroundColor: Colors.blue),
+
+          // floatingActionButton: Container(
+          //   child: FloatingActionButton(
+          //     onPressed: () {
+          //       setState(() {
+          //         addContact = !addContact;
+          //       });
+          //     },
+          //     child: fabIcon(),
+          //   ),
         ));
   }
 
-  Icon fabIcon() {
+  Widget fabIcon() {
     if (!addContact) {
-      return Icon(Icons.add);
+      return Stack(children: <Widget>[
+        // Stroked text as border.
+        Icon(
+          Icons.add,
+          color: Colors.black87.withAlpha(100),
+          size: 42,
+        ),
+        // Solid text as fill.
+        Icon(
+          Icons.add,
+          color: Colors.white,
+          size: 40,
+        )
+      ]);
     } else {
-      return Icon(Icons.close);
+      return Stack(children: <Widget>[
+        // Stroked text as border.
+        Icon(
+          Icons.close,
+          color: Colors.black87.withAlpha(100),
+          size: 42,
+        ),
+        // Solid text as fill.
+        Icon(
+          Icons.close,
+          color: Colors.white,
+          size: 40,
+        )
+      ]);
     }
   }
 
@@ -189,6 +227,26 @@ class _ContactsStateFullState extends State<ContactsStateFull>
   }
 
   Widget EmailInput() {
+    return Center(
+      child: Container(
+          child: Column(children: [
+        TextFormField(
+          controller: contactNameInput,
+          focusNode: textFocus,
+          style: TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            hintStyle: TextStyle(color: Colors.white),
+            hintText: 'Enter the name of the emergency contact',
+          ),
+        ),
+        GradientText('Name of the contact',
+            gradient: LinearGradient(colors: [
+              Color(0xff27e1e6),
+              Color(0xffaa64ea),
+            ])),
+      ])),
+    );
+
     return Container(
       width: MediaQuery.of(context).size.width * 4 / 5 + 50,
       height: MediaQuery.of(context).size.height / 3 * 2,

@@ -7,18 +7,18 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:718857983651:android:ad5cf5fa386a32ed26d116",
+        "mobilesdk_app_id": "1:718857983651:android:a9ddbf878e02a0e826d116",
         "android_client_info": {
           "package_name": "com.hyde.safety_application"
         }
       },
       "oauth_client": [
         {
-          "client_id": "718857983651-c53v6ojfikesi2a548ohu6jj4hmeahql.apps.googleusercontent.com",
+          "client_id": "718857983651-ocd8hdep4e8g1dnl3361ghsehds3lnlq.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.hyde.safety_application",
-            "certificate_hash": "a5abd11b401cb79d8eeaab5f6d0e2594bf790671"
+            "certificate_hash": "827710b76617e0c7d63e45e75076c35df0def971"
           }
         },
         {
